@@ -30,6 +30,7 @@ This file summarizes core contracts. For the **full interview-ready design docum
 ## Docs
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Data storage (PostgreSQL vs Redis)](docs/DATA.md)
 - [API Reference](docs/API.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [README](README.md)

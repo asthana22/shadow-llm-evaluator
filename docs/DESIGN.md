@@ -197,29 +197,14 @@ Shed jobs are **intentionally not retried** — shadow eval is best-effort under
 
 ## 8. Data Model
 
-### `proxy_requests` (primary table)
+**Full schema, column-level write paths, and Redis key reference:** [docs/DATA.md](DATA.md)
 
-| Column | Purpose |
-|--------|---------|
-| `request_id` | PK, server-generated UUID |
-| `request_body` | Original inbound JSON |
-| `primary_status`, `primary_response` | Primary LLM result |
-| `shadow_status` | `pending` → `processing` → `completed` / `failed` |
-| `candidate_*` | Candidate response fields |
-| `primary_valid`, `candidate_valid` | Evaluator flags |
-| `exact_action_match` | Heuristic result |
-| `primary_action`, `candidate_action` | Extracted actions |
+| Store | Holds | Why |
+|-------|-------|-----|
+| **PostgreSQL** | `proxy_requests` — full request + primary + shadow results | Durable audit; worker loads body by `request_id` |
+| **Valkey/Redis** | ARQ queue (`arq:queue`) + live counters (`metrics:*`) | Fast enqueue; sub-ms `/metrics` reads |
 
-### Redis / Valkey keys (metrics)
-
-| Key | Counter |
-|-----|---------|
-| `metrics:total_requests` | Primary requests processed |
-| `metrics:shadow_errors` | Candidate failures |
-| `metrics:shadow_timeouts` | Candidate timeouts |
-| `metrics:shadow_shed` | Shed jobs |
-| `metrics:comparisons_completed` | Finished evaluations |
-| `metrics:exact_match_count` | Exact action matches |
+**Not in Redis:** request/response bodies (Postgres only). **Not in Postgres:** queue depth or aggregated counters.
 
 ---
 

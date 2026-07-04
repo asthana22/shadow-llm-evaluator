@@ -175,6 +175,8 @@ sequenceDiagram
 
 Schema bootstrapped via `init_db()` on startup (`Base.metadata.create_all`).
 
+**What goes where:** PostgreSQL stores per-request audit (`proxy_requests`); Valkey/Redis stores the ARQ queue and live metrics counters. See [DATA.md](DATA.md) for full schema and write timeline.
+
 ---
 
 ## 8. Observability

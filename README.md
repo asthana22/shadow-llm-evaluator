@@ -19,7 +19,7 @@ Client ──► Primary LLM ──► response (immediate)
               └──► [background] ──► Candidate LLM ──► Evaluator ──► Metrics
 ```
 
-📄 **Interview / deep dive:** [docs/DESIGN.md](docs/DESIGN.md) · [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+📄 **Interview / deep dive:** [docs/DESIGN.md](docs/DESIGN.md) · [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/DATA.md](docs/DATA.md)
 
 ---
 

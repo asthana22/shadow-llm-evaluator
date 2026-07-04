@@ -19,8 +19,17 @@ DATABASE_URL
 DB_DRIVER=postgres
 SHADOW_MAX_CONCURRENCY=50
 SHADOW_MAX_QUEUE_SIZE=500
-ENABLE_AUDIT_LOG=true
+ENABLE_AUDIT_LOG=false   # optional shadow_evaluations table — not wired in worker yet
 ```
+
+### Data stores (production)
+
+| Service | Purpose |
+|---------|---------|
+| **Managed PostgreSQL** | `proxy_requests` — request bodies, primary/candidate responses, evaluation results |
+| **Managed Valkey** | ARQ job queue + `metrics:*` counters for `GET /metrics` |
+
+See [DATA.md](DATA.md) for schema and write paths.
 
 ### Local parity
 
