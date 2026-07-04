@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any
 
@@ -6,6 +7,8 @@ import httpx
 from app.config import Settings
 from app.proxy.errors import PrimaryTimeoutError, PrimaryUnavailableError
 from app.types.chat import PrimaryProxyResult
+
+logger = logging.getLogger(__name__)
 
 FORWARDED_REQUEST_HEADERS = frozenset(
     {"content-type", "authorization", "accept", "accept-language"}
@@ -81,6 +84,13 @@ class PrimaryLlmClient:
         owns_client = self._http_client is None
         outbound_headers = self._build_headers(headers)
 
+        logger.info(
+            "Calling upstream LLM url=%s body_bytes=%s timeout_s=%s",
+            self._url,
+            len(body),
+            self._timeout,
+        )
+
         try:
             response = await client.post(
                 self._url,
@@ -89,6 +99,11 @@ class PrimaryLlmClient:
                 timeout=self._timeout,
             )
             latency_ms = int((time.monotonic() - started) * 1000)
+            logger.info(
+                "Upstream LLM response status=%s latency_ms=%s",
+                response.status_code,
+                latency_ms,
+            )
             return PrimaryProxyResult(
                 status_code=response.status_code,
                 body=response.text,
@@ -96,8 +111,10 @@ class PrimaryLlmClient:
                 latency_ms=latency_ms,
             )
         except httpx.TimeoutException as exc:
+            logger.warning("Upstream LLM timed out after %ss url=%s", self._timeout, self._url)
             raise PrimaryTimeoutError("Primary LLM request timed out") from exc
         except httpx.HTTPError as exc:
+            logger.warning("Upstream LLM unavailable url=%s error=%s", self._url, exc)
             raise PrimaryUnavailableError("Primary LLM is unavailable") from exc
         finally:
             if owns_client:

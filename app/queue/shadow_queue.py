@@ -27,9 +27,18 @@ class ShadowQueue:
         try:
             depth = await self.queue_depth(pool)
             if depth >= self._settings.shadow_max_queue_size:
-                logger.warning("Shadow queue full (%s), shedding %s", depth, request_id)
+                logger.warning(
+                    "Shadow queue full depth=%s shedding request_id=%s",
+                    depth,
+                    request_id,
+                )
                 return False
             await pool.enqueue_job(SHADOW_JOB_NAME, request_id)
+            logger.info(
+                "Shadow job queued request_id=%s queue_depth=%s",
+                request_id,
+                depth + 1,
+            )
             return True
         finally:
             await pool.aclose()

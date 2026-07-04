@@ -47,8 +47,15 @@ class PrimaryProxyService:
         body: bytes,
         headers: dict[str, str],
     ) -> PrimaryProxyResult:
+        logger.info("Primary chat started request_id=%s body_bytes=%s", request_id, len(body))
         upstream_body = prepare_upstream_body(body, self._default_model)
         result = await self._client.forward(upstream_body, headers)
+        logger.info(
+            "Primary chat returning request_id=%s status=%s latency_ms=%s",
+            request_id,
+            result.status_code,
+            result.latency_ms,
+        )
 
         task = asyncio.create_task(
             self._run_side_effects(request_id=request_id, body=body, result=result),
@@ -78,6 +85,7 @@ class PrimaryProxyService:
                         request_body=parse_request_body(body),
                         result=result,
                     )
+                    logger.info("Persisted primary response request_id=%s", request_id)
                 except Exception:
                     logger.exception("Failed to persist primary response for %s", request_id)
                     await session.rollback()
@@ -92,6 +100,9 @@ class PrimaryProxyService:
                     enqueued = await shadow_queue.try_enqueue(request_id)
                     if not enqueued:
                         await metrics.record_shadow_shed()
+                        logger.warning("Shadow job shed request_id=%s", request_id)
+                    else:
+                        logger.info("Shadow job enqueued request_id=%s", request_id)
                 except Exception:
                     logger.exception("Failed to enqueue shadow job for %s", request_id)
                     try:

@@ -29,7 +29,12 @@ def create_engine(settings: Settings | None = None) -> AsyncEngine:
     if cfg.resolved_db_driver == "sqlite":
         db_path = Path(cfg.sqlite_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-    return create_async_engine(cfg.sqlalchemy_url, echo=False)
+        return create_async_engine(cfg.sqlalchemy_url, echo=False)
+    return create_async_engine(
+        cfg.sqlalchemy_url,
+        echo=False,
+        connect_args=cfg.sqlalchemy_connect_args,
+    )
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
