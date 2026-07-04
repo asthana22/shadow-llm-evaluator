@@ -1,0 +1,63 @@
+# DigitalOcean App Platform spec (reference)
+
+name: shadow-llm-evaluator
+
+services:
+  - name: web
+    github:
+      repo: YOUR_ORG/shadow-llm-evaluator
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+    health_check:
+      http_path: /health
+    envs:
+      - key: PORT
+        value: "8080"
+      - key: PRIMARY_LLM_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: CANDIDATE_LLM_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: REDIS_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_DRIVER
+        value: postgres
+      - key: SHADOW_MAX_CONCURRENCY
+        value: "50"
+      - key: SHADOW_MAX_QUEUE_SIZE
+        value: "500"
+
+workers:
+  - name: shadow-worker
+    github:
+      repo: YOUR_ORG/shadow-llm-evaluator
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: arq worker.main.WorkerSettings
+    envs:
+      - key: CANDIDATE_LLM_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: REDIS_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_DRIVER
+        value: postgres
+      - key: SHADOW_MAX_CONCURRENCY
+        value: "50"

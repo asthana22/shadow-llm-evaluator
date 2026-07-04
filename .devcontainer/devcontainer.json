@@ -1,0 +1,11 @@
+{
+  "name": "Shadow LLM Evaluator",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Shadow LLM API + Test UI",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt"
+}

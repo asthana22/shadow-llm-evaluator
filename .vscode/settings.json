@@ -1,0 +1,10 @@
+{
+  "remote.autoForwardPorts": true,
+  "remote.autoForwardPortsSource": "process",
+  "remote.portsAttributes": {
+    "8080": {
+      "label": "Shadow LLM API + Test UI",
+      "onAutoForward": "notify"
+    }
+  }
+}
