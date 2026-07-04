@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
+import ssl
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
@@ -11,7 +12,35 @@ _ASYNCPG_STRIP_QUERY_PARAMS = frozenset(
 )
 
 
-def normalize_postgres_url(database_url: str) -> tuple[str, dict[str, Any]]:
+def _asyncpg_ssl_context(sslmode: str, ca_file: str | None = None) -> ssl.SSLContext:
+    """
+    Build an SSL context for asyncpg from libpq-style sslmode.
+
+    ``require`` encrypts the connection without verifying DO's managed-DB CA
+    (matches typical libpq ``sslmode=require`` behavior).
+    """
+    ctx = ssl.create_default_context()
+    if sslmode == "require":
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    if sslmode == "prefer":
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    if sslmode in ("verify-ca", "verify-full"):
+        if ca_file:
+            ctx.load_verify_locations(cafile=ca_file)
+        ctx.check_hostname = sslmode == "verify-full"
+        return ctx
+    return ctx
+
+
+def normalize_postgres_url(
+    database_url: str,
+    *,
+    ssl_ca_file: str | None = None,
+) -> tuple[str, dict[str, Any]]:
     """
     Convert a DigitalOcean/libpq-style Postgres URL for SQLAlchemy asyncpg.
 
@@ -34,7 +63,7 @@ def normalize_postgres_url(database_url: str) -> tuple[str, dict[str, Any]]:
     parsed = parsed.set(query=query)
     connect_args: dict[str, Any] = {}
     if sslmode in ("require", "verify-ca", "verify-full", "prefer"):
-        connect_args["ssl"] = True
+        connect_args["ssl"] = _asyncpg_ssl_context(sslmode, ssl_ca_file)
     elif sslmode == "disable":
         connect_args["ssl"] = False
 
@@ -65,6 +94,7 @@ class Settings(BaseSettings):
 
     db_driver: Literal["sqlite", "postgres"] | None = None
     database_url: str | None = None
+    database_ssl_ca_file: str | None = None
     sqlite_path: str = "./data/shadow_evaluator.db"
     enable_audit_log: bool = False
 
@@ -83,14 +113,20 @@ class Settings(BaseSettings):
         if self.resolved_db_driver == "postgres":
             if not self.database_url:
                 raise ValueError("DATABASE_URL is required when DB_DRIVER=postgres")
-            url, _ = normalize_postgres_url(self.database_url)
+            url, _ = normalize_postgres_url(
+                self.database_url,
+                ssl_ca_file=self.database_ssl_ca_file,
+            )
             return url
         return f"sqlite+aiosqlite:///{Path(self.sqlite_path).as_posix()}"
 
     @property
     def sqlalchemy_connect_args(self) -> dict[str, Any]:
         if self.resolved_db_driver == "postgres" and self.database_url:
-            _, connect_args = normalize_postgres_url(self.database_url)
+            _, connect_args = normalize_postgres_url(
+                self.database_url,
+                ssl_ca_file=self.database_ssl_ca_file,
+            )
             return connect_args
         return {}
 

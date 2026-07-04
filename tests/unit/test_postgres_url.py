@@ -1,7 +1,9 @@
+import ssl
+
 from app.config import normalize_postgres_url
 
 
-def test_strips_sslmode_and_enables_ssl():
+def test_strips_sslmode_and_uses_ssl_context_for_require():
     raw = (
         "postgresql://doadmin:secret@db.example.com:25060/defaultdb?sslmode=require"
     )
@@ -9,7 +11,10 @@ def test_strips_sslmode_and_enables_ssl():
 
     assert "sslmode" not in url
     assert url.startswith("postgresql+asyncpg://")
-    assert connect_args == {"ssl": True}
+    ctx = connect_args["ssl"]
+    assert isinstance(ctx, ssl.SSLContext)
+    assert ctx.verify_mode == ssl.CERT_NONE
+    assert ctx.check_hostname is False
 
 
 def test_postgres_scheme_normalized():
@@ -18,7 +23,7 @@ def test_postgres_scheme_normalized():
 
     assert url.startswith("postgresql+asyncpg://")
     assert "sslmode" not in url
-    assert connect_args["ssl"] is True
+    assert isinstance(connect_args["ssl"], ssl.SSLContext)
 
 
 def test_no_sslmode_means_no_connect_args():
